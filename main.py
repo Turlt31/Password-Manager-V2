@@ -6,18 +6,19 @@ import secrets
 import random
 import string
 import pyotp
+import json
 import os
 
+from theme import loadTheme
 import cryption
-import theme
 import apps
 
 root = Tk()
 root.title("Password Manager")
 root.geometry("1266x668")
-root.configure(bg=theme.BG_MAIN)
+root.configure(bg="#161A20")
 root.iconbitmap('icon/pwm.ico')
-menuOpen = "pasw"
+menuOpen = ""
 
 def loginScreen():
     for widget in root.winfo_children(): widget.destroy()
@@ -111,14 +112,29 @@ def loginScreen():
             if not usernameAvailable:
                 Label(rect, text="Username already exists!", font=('arial', 20), bg=BG_COLOR_LIGHT, fg="red").place(x=80, y=340)
             else:
+                data = {
+                    "settings": {
+                        "General Settings": {
+                            "defaultScreen": "pasw",
+                            "favicons": True
+                        },
+                        "Authentication": {
+                            "requirePin": False,
+                            "pin": "",
+                            "auth": False,
+                            "authKey": ""
+                        }
+                    }
+                }
                 os.mkdir(f"files/{username}")
                 os.mkdir(f"files/{username}/config")
 
                 with open('files/logins.txt', 'a') as f: f.write(f"{username},{password}\n")
                 [open(f"files/{username}/{file}", 'w').close() for file in ["cards.txt", "passwords.txt", "notes.txt"]]
+                with open(f"files/{username}/config/settings.json", "w") as f:
+                    json.dump(data, f, indent=4)
 
                 Label(rect, text="Account Created!", font=('arial', 32), bg=BG_COLOR_LIGHT, fg="green").place(x=80, y=340)
-        def back(): loginScreen()
 
         Label(rect, text="Welcome New User!", font=('arial', 35), bg=BG_COLOR_LIGHT).place(x=40, y=10)
         Label(rect, text="Register", font=('arial', 32), bg=BG_COLOR_LIGHT).place(x=155, y=60)
@@ -136,7 +152,7 @@ def loginScreen():
         p.bind("<FocusOut>", on_focus_out)
     
         Button(rect, text="Register", font=("arial", 32), command=saveAcc).place(x=150, y=260, width=200, height=60)
-        Button(rect, text="Return", font=("arial", 32), command=back).place(x=150, y=420, width=200, height=60)
+        Button(rect, text="Return", font=("arial", 32), command=loginScreen).place(x=150, y=420, width=200, height=60)
     def login():
         user = u.get()
         pasw = p.get()
@@ -147,10 +163,10 @@ def loginScreen():
             for i in data:
                 i = i.split(",")
                 if user == i[0] and pasw == i[1].strip('\n'):
-                    print("[+] Login")
                     mainScreen(user)
-                elif user == i[0] and pasw != i[1]: print("[-] Incorrect password")
-                elif user != i[0]: print("[-] Account Not Exist")
+                    break
+                elif user == i[0] and pasw != i[1]: errL.config(text="[-] Incorrect Password", fg="red"); break
+                elif user != i[0]: errL.config(text="[-] Account Does Not Exist", fg="red")
 
     rect = Canvas(root, width=500, height=500, bg=BG_COLOR_LIGHT, highlightthickness=0)
     rect.place(relx=0.5, rely=0.5, anchor=CENTER)
@@ -175,6 +191,9 @@ def loginScreen():
     p.bind("<FocusIn>", on_focus_in)
     p.bind("<FocusOut>", on_focus_out)
 
+    errL = Label(rect, font=('arial', 30), bg=BG_COLOR_LIGHT)
+    errL.place(x=10, y=350)
+
     logB = Button(rect, text="Login", font=("arial", 32), command=login)
     logB.place(x=150, y=260, width=200, height=60)
     logB.bind("<Enter>", onHoverEnter)
@@ -189,11 +208,24 @@ def mainScreen(user):
     for widget in root.winfo_children(): widget.destroy()
     placeholder = "Search..."
     
-    BG_PANEL = theme.BG_PANEL
-    BG_LIST = theme.BG_LIST
-    BG_BUTTON = theme.BG_BUTTON
-    FG_COLOR_P = theme.FG_PRIMARY
-    FG_COLOR_S = theme.FG_SECONDARY
+    with open(f'files/{user}/config/settings.json', 'r') as f:
+        global menuOpen
+        data = json.load(f)
+        menuOpen = data["settings"]["General Settings"]["defaultScreen"]
+        currentTheme = loadTheme(data["settings"]["General Settings"]["theme"])
+
+    BG_PANEL = currentTheme["BG_PANEL"]
+    BG_LIST = currentTheme["BG_LIST"]
+    BG_CARD = currentTheme["BG_CARD"]
+    
+    BG_INPUT = currentTheme["BG_INPUT"]
+    BG_BUTTON = currentTheme["BG_BUTTON"]
+    BG_BUTTON_ALT = currentTheme["BG_BUTTON_ALT"]
+
+    FG_COLOR_P = currentTheme["FG_PRIMARY"]
+    FG_COLOR_S = currentTheme["FG_SECONDARY"]
+    ACCENT_BLUE = currentTheme["ACCENT_BLUE"]
+    ACCENT_BLUE_GLOW = currentTheme["ACCENT_BLUE_GLOW"]
     
     def load(user):
         with open(f"files/{user}/passwords.txt", 'r') as f:
@@ -208,46 +240,48 @@ def mainScreen(user):
     def onClick(event):
         global menuOpen
         widget = event.widget
-        #searchE.delete(0, END)
 
         if widget == loginsB:
-            loginsB.config(fg=theme.ACCENT_BLUE, image=loginsIconBPTK)
+            loginsB.config(fg=ACCENT_BLUE, image=loginsIconBPTK)
             cardsB.config(fg=FG_COLOR_P, image=cardsIconWPTK)
             menuOpen = "pasw"
             passwordList, cardList = load(user)
             apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
         if widget == cardsB:
-            cardsB.config(fg=theme.ACCENT_BLUE, image=cardsIconBPTK)
+            cardsB.config(fg=ACCENT_BLUE, image=cardsIconBPTK)
             loginsB.config(fg=FG_COLOR_P, image=loginsIconWPTK)
             menuOpen = "card"
             passwordList, cardList = load(user)
             apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
         if widget == logoutB: loginScreen()
         if widget == settingsB:
+            menuOpen = "sett"
+            cardsB.config(fg=FG_COLOR_P, image=cardsIconWPTK)
+            loginsB.config(fg=FG_COLOR_P, image=loginsIconWPTK)
             apps.settings(inner_frame, contFrame, canvas, dataFrame, user)
     def onHoverEnter(event):
         global menuOpen
         widget = event.widget
 
         if widget == loginsB:
-            if menuOpen == "pasw": loginsB.configure(fg=theme.ACCENT_BLUE_GLOW, bg=BG_PANEL, image=loginsIconBSTK)
+            if menuOpen == "pasw": loginsB.configure(fg=ACCENT_BLUE_GLOW, bg=BG_PANEL, image=loginsIconBSTK)
             else: loginsB.configure(fg=FG_COLOR_S, bg=BG_PANEL, image=loginsIconWSTK)
         if widget == cardsB:
-            if menuOpen == "card": cardsB.configure(fg=theme.ACCENT_BLUE_GLOW, bg=BG_PANEL, image=cardsIconBSTK)
+            if menuOpen == "card": cardsB.configure(fg=ACCENT_BLUE_GLOW, bg=BG_PANEL, image=cardsIconBSTK)
             else: cardsB.configure(fg=FG_COLOR_S, bg=BG_PANEL, image=cardsIconWSTK)
-        if widget == logoutB: logoutB.configure(fg=FG_COLOR_S, bg=theme.BG_BUTTON_ALT, image=logoutIconGTK)
-        if widget == settingsB: settingsB.configure(fg=FG_COLOR_S, bg=theme.BG_BUTTON_ALT, image=settingsIconGTK)
+        if widget == logoutB: logoutB.configure(fg=FG_COLOR_S, bg=BG_BUTTON_ALT, image=logoutIconGTK)
+        if widget == settingsB: settingsB.configure(fg=FG_COLOR_S, bg=BG_BUTTON_ALT, image=settingsIconGTK)
     def onHoverLeave(event): 
         widget = event.widget
 
         if widget == loginsB:
-            if menuOpen == "pasw": loginsB.configure(fg=theme.ACCENT_BLUE, bg=BG_PANEL, image=loginsIconBPTK)
+            if menuOpen == "pasw": loginsB.configure(fg=ACCENT_BLUE, bg=BG_PANEL, image=loginsIconBPTK)
             else: loginsB.configure(fg=FG_COLOR_P, bg=BG_PANEL, image=loginsIconWPTK)
         if widget == cardsB: 
-            if menuOpen == "card": cardsB.configure(fg=theme.ACCENT_BLUE, bg=BG_PANEL, image=cardsIconBPTK)
+            if menuOpen == "card": cardsB.configure(fg=ACCENT_BLUE, bg=BG_PANEL, image=cardsIconBPTK)
             else: cardsB.configure(fg=FG_COLOR_P, bg=BG_PANEL, image=cardsIconWPTK)
-        if widget == logoutB: logoutB.configure(fg=FG_COLOR_P, bg=theme.BG_BUTTON_ALT, image=logoutIconWTK)
-        if widget == settingsB: settingsB.configure(fg=FG_COLOR_P, bg=theme.BG_BUTTON_ALT, image=settingsIconWTK)
+        if widget == logoutB: logoutB.configure(fg=FG_COLOR_P, bg=BG_BUTTON_ALT, image=logoutIconWTK)
+        if widget == settingsB: settingsB.configure(fg=FG_COLOR_P, bg=BG_BUTTON_ALT, image=settingsIconWTK)
     def onFocusIn(event):
         if searchE.get() == placeholder:
             searchE.delete(0, END)
@@ -292,7 +326,7 @@ def mainScreen(user):
             phAuth = "Authentication Code"
             showVar = [True]
             
-            tld = [".com", ".net", ".lt", ".org", ".gov"]
+            tld = [".com", ".net", ".lt", ".org", ".gov", ".io"]
             selected = StringVar(value=tld[0])
 
 
@@ -377,28 +411,28 @@ def mainScreen(user):
                 with open(f"files/{user}/passwords.txt", 'a') as f: f.write(account)
                 with open(f"files/{user}/passwords.txt", 'r') as f: passwordList = f.readlines()
                 addScreen.destroy()
-                apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, user, searchE.get())
+                apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
 
             Label(addScreen, text="Add Password", font=('arial', 32), bg=BG_PANEL, fg=FG_COLOR_P).place(x=60, y=5)
 
-            wnE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            wnE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             wnE.place(x=10, y=70, height=50, width=260)
             wnE.insert(0, phN)
             wnE.bind("<FocusIn>", on_focus_in)
             wnE.bind("<FocusOut>", on_focus_out)
 
             tldB =  OptionMenu(addScreen, selected, *tld)
-            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=theme.BG_INPUT, relief="flat", borderwidth=0, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             tldB["menu"].config(font=('arial', 18))
             tldB.place(x=280, y=70, height=50, width=110)
 
-            uE = Entry(addScreen, font=('arial', 24), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            uE = Entry(addScreen, font=('arial', 24), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             uE.place(x=10, y=135, height=50, width=380)
             uE.insert(0, phU)
             uE.bind("<FocusIn>", on_focus_in)
             uE.bind("<FocusOut>", on_focus_out)
 
-            pE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            pE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             pE.place(x=10, y=200, height=50, width=380)
             pE.insert(0, phP)
             pE.bind("<FocusIn>", on_focus_in)
@@ -406,19 +440,19 @@ def mainScreen(user):
 
             Label(addScreen, text="Optional", font=('arial', 30), bg=BG_PANEL, fg=FG_COLOR_P).place(x=125, y=280)
 
-            authE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            authE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             authE.place(x=10, y=340, height=50, width=380)
             authE.insert(0, phAuth)
             authE.bind("<FocusIn>", on_focus_in)
             authE.bind("<FocusOut>", on_focus_out)
 
-            genB = Button(addScreen, text="Generate Password", font=('arial', 14), command=genPassword, bg=theme.BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=2, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            genB = Button(addScreen, text="Generate Password", font=('arial', 14), command=genPassword, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=2, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             genB.place(x=15, y=455, height=45, width=180)
 
-            showB = Button(addScreen, text="Show Password", font=('arial', 14), command=showPassword, bg=theme.BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            showB = Button(addScreen, text="Show Password", font=('arial', 14), command=showPassword, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             showB.place(x=205, y=455, height=45, width=180)
 
-            saveB = Button(addScreen, text="Save Account", font=('arial', 30),command=savePassword, bg=theme.BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            saveB = Button(addScreen, text="Save Account", font=('arial', 30),command=savePassword, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             saveB.place(x=10, y=510, height=50, width=380)
 
             showPassword()
@@ -432,7 +466,7 @@ def mainScreen(user):
             phCvc = "CVC Code"
             phPin = "PIN Code"
 
-            tld = [".com", ".net", ".lt", ".org", ".gov"]
+            tld = [".com", ".net", ".lt", ".org", ".gov", ".io"]
             selected = StringVar(value=tld[0])
 
             def on_focus_in(event):
@@ -511,53 +545,53 @@ def mainScreen(user):
                 with open(f"files/{user}/cards.txt", 'a') as f: f.write(cardDetails)
                 with open(f"files/{user}/cards.txt", 'r') as f: passwordList = f.readlines()
                 addScreen.destroy()
-                apps.cards(passwordList, inner_frame, contFrame, canvas, dataFrame, user, searchE.get())
+                apps.cards(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
 
             Label(addScreen, text="Add Card", font=('arial', 32), bg=BG_PANEL, fg=FG_COLOR_P).place(x=100, y=5)
 
-            bE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            bE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             bE.place(x=10, y=70, height=50, width=260)
             bE.insert(0, phB)
             bE.bind("<FocusIn>", on_focus_in)
             bE.bind("<FocusOut>", on_focus_out)
 
             tldB =  OptionMenu(addScreen, selected, *tld)
-            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=theme.BG_INPUT, relief="flat", borderwidth=0, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             tldB["menu"].config(font=('arial', 18))
             tldB.place(x=280, y=70, height=50, width=110)
 
-            nE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            nE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             nE.place(x=10, y=135, height=50, width=380)
             nE.insert(0, phN)
             nE.bind("<FocusIn>", on_focus_in)
             nE.bind("<FocusOut>", on_focus_out)
 
-            cE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            cE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             cE.place(x=10, y=220, height=50, width=380)
             cE.insert(0, phC)
             cE.bind("<FocusIn>", on_focus_in)
             cE.bind("<FocusOut>", on_focus_out)
 
-            expdE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            expdE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             expdE.place(x=10, y=285, height=50, width=380)
             expdE.insert(0, phExpd)
             expdE.bind("<FocusIn>", on_focus_in)
             expdE.bind("<FocusOut>", on_focus_out)
             expdE.bind("<KeyRelease>", format_expiry)
 
-            cvcE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            cvcE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             cvcE.place(x=10, y=365, height=50, width=380)
             cvcE.insert(0, phCvc)
             cvcE.bind("<FocusIn>", on_focus_in)
             cvcE.bind("<FocusOut>", on_focus_out)
 
-            pinE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            pinE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             pinE.place(x=10, y=430, height=50, width=380)
             pinE.insert(0, phPin)
             pinE.bind("<FocusIn>", on_focus_in)
             pinE.bind("<FocusOut>", on_focus_out)
 
-            saveB = Button(addScreen, text="Save Card", font=('arial', 30), command=saveCard, bg=theme.BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            saveB = Button(addScreen, text="Save Card", font=('arial', 30), command=saveCard, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             saveB.place(x=10, y=510, height=50, width=380)
 
     root.columnconfigure(0, weight=3)
@@ -619,17 +653,17 @@ def mainScreen(user):
     inner_frame.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
     canvas.create_window((0,0), window=inner_frame, anchor="nw")
 
-    searchE = Entry(contFrame, font=("arial", 20), fg=FG_COLOR_S, bg=theme.BG_INPUT, relief="flat", borderwidth=0, justify='center')
+    searchE = Entry(contFrame, font=("arial", 20), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify='center')
     searchE.grid(row=0, column=0, sticky="ew", padx=3, pady=3)
     searchE.insert(0, placeholder)
     searchE.bind("<FocusIn>", onFocusIn)
     searchE.bind("<FocusOut>", onFocusOut)
     searchE.bind("<Key>", search)
 
-    addB = Button(contFrame, text="+", font=('arial', 35, 'bold'), command=add, bg=BG_BUTTON, fg=FG_COLOR_P, activebackground=theme.BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+    addB = Button(contFrame, text="+", font=('arial', 35, 'bold'), command=add, bg=BG_BUTTON, fg=FG_COLOR_P, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
     addB.grid(row=0, column=1, sticky="e", padx=3, pady=3)
 
-    dataFrame = Frame(root, bg=theme.BG_CARD)
+    dataFrame = Frame(root, bg=BG_CARD)
     dataFrame.grid(row=0, column=2, sticky="nsew")
 
     loginsIconWP = Image.open("icon/buttonImg/key_WP.png").resize((52,52), Image.Resampling.LANCZOS)
@@ -680,7 +714,7 @@ def mainScreen(user):
     settingsIconG = settingsIconG.resize((52,52))
     settingsIconGTK = ImageTk.PhotoImage(settingsIconG)
 
-    settingsB = Label(menuFrame, image=settingsIconWTK, font=('arial', 25), bg=theme.BG_BUTTON_ALT, fg=FG_COLOR_P, border=1, relief="solid")
+    settingsB = Label(menuFrame, image=settingsIconWTK, font=('arial', 25), bg=BG_BUTTON_ALT, fg=FG_COLOR_P, border=1, relief="solid")
     settingsB.image = settingsIconWTK
     settingsB.image = settingsIconGTK
     settingsB.place(relx=0.5, rely=0.9, relwidth=0.45, height=60)
@@ -696,7 +730,7 @@ def mainScreen(user):
     logoutIconG = logoutIconG.resize((52,52))
     logoutIconGTK = ImageTk.PhotoImage(logoutIconG)
 
-    logoutB = Label(menuFrame, image=logoutIconWTK, font=('arial', 32), bg=theme.BG_BUTTON_ALT, fg=FG_COLOR_P, border=1, relief="solid")
+    logoutB = Label(menuFrame, image=logoutIconWTK, font=('arial', 32), bg=BG_BUTTON_ALT, fg=FG_COLOR_P, border=1, relief="solid")
     logoutB.place(relx=0.05, rely=0.9, relwidth=0.4, height=60)
     logoutB.image = logoutIconWTK
     logoutB.image = logoutIconGTK
@@ -704,7 +738,17 @@ def mainScreen(user):
     logoutB.bind("<Enter>", onHoverEnter)
     logoutB.bind("<Leave>", onHoverLeave)
 
-    apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
+    if menuOpen == "pasw":
+        apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
+        loginsB.config(fg=ACCENT_BLUE, image=loginsIconBPTK)
+    elif menuOpen == "card":
+        apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get())
+        cardsB.config(fg=ACCENT_BLUE, image=cardsIconBPTK)
+    elif menuOpen == "sett":
+        cardsB.config(fg=FG_COLOR_P, image=cardsIconWPTK)
+        loginsB.config(fg=FG_COLOR_P, image=loginsIconWPTK)
+        apps.settings(inner_frame, contFrame, canvas, dataFrame, user)
 
-loginScreen()
+#loginScreen()
+mainScreen("a")
 root.mainloop()
