@@ -37,7 +37,7 @@ python main.py
 
 ## Data & Settings Layout
 - `files/logins.txt` — list of usernames/passwords for the app.
-- `files/<user>/passwords.txt` — CSV lines: `name,url,username,password[,otpSecret]`
+- `files/<user>/passwords.txt` — CSV lines: `name,url,username,password,[otpSecret]`
 - `files/<user>/cards.txt` — CSV lines: `bank,url,nameOnCard,cardNumber,expiry,cvc,pin`
 - `files/<user>/notes.txt` — reserved for notes (if used).
 - `files/<user>/config/settings.json` — per-user UI/auth preferences.
