@@ -58,5 +58,5 @@ python main.py
 
 <br>
 
-Feel Free to reach out to me if you have any questions
+Feel Free to reach out to me if you have any questions <br>
 Discord: `.turtl3.`
