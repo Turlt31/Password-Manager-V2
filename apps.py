@@ -462,13 +462,15 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
 
 
     filtered_passwords = []
-    if searchParam == "":
+    passwordListLower = [p.lower() for p in passwordList]
+
+    if not searchParam:
         filtered_passwords = list(enumerate(passwordList))
     else:
         search_lower = searchParam.lower()
-        for idx, password in enumerate(passwordList):
-            password_parts = password.split(',')
-            if search_lower in password_parts[0].lower(): filtered_passwords.append((idx, password))
+        for idx, lower_line in enumerate(passwordListLower):
+            if search_lower in lower_line:
+                filtered_passwords.append((idx, passwordList[idx]))
 
     for idx, line in filtered_passwords:
         parts = line.strip("\n").split(",")
@@ -973,13 +975,15 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
 
 
     filteredCards = []
+    cardListLower = [c.lower() for c in cardList]
+
     if not searchParam:
         filteredCards = list(enumerate(cardList))
     else:
         search_lower = searchParam.lower()
-        for idx, line in enumerate(cardList):
-            parts = line.split(',')
-            if parts and search_lower in parts[0].lower(): filteredCards.append((idx, line))
+        for idx, lower_line in enumerate(cardListLower):
+            if search_lower in lower_line:
+                filteredCards.append((idx, cardList[idx]))
 
     for idx, line in filteredCards:
         parts = line.strip("\n").split(",")

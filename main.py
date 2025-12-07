@@ -341,9 +341,9 @@ def mainScreen(user, vaultKey):
     def search(event):
         global menuOpen
         if menuOpen == "pasw":
-            apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, user, searchE.get(), vaultKey)
+            apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
         if menuOpen == "card":
-            apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, user, searchE.get(), vaultKey)
+            apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
     def add():
         def centerWindow(root, win, w, h):
             root.update_idletasks()
