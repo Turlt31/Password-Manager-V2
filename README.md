@@ -61,7 +61,7 @@ python main.py
 <img width="788" height="414" alt="image" src="https://github.com/user-attachments/assets/41a6a43d-adec-4e7e-ae35-de5d79fec15c" />
 <img width="788" height="414" alt="image" src="https://github.com/user-attachments/assets/fc2f7dff-6a82-491d-b8bc-1daa55db4d7d" />
 <br>
-# Settings
+### Settings
 <br>
 <img width="788" height="414" alt="image" src="https://github.com/user-attachments/assets/53e8f6a6-9d57-4b51-a60d-2d8adca7616c" />
 <img width="788" height="414" alt="image" src="https://github.com/user-attachments/assets/5abd3c9f-6f0a-4061-883a-ed625ef4874b" />
