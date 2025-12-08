@@ -58,6 +58,8 @@ python main.py
 
 ## Screen Shots
 <img width="788" height="414" alt="image" src="https://github.com/user-attachments/assets/41a6a43d-adec-4e7e-ae35-de5d79fec15c" />
+<img width="788" height="414" alt="image" src="https://github.com/user-attachments/assets/5abd3c9f-6f0a-4061-883a-ed625ef4874b" />
+
 
 
 <br>
