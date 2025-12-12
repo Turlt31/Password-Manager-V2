@@ -45,7 +45,6 @@ def verifyMasterPassword(user_input: str, stored_salt: str, stored_hash: str):
     else:
         return False, None
 
-
 def encrypt_line(vault_key: bytes, plaintext: str) -> str:
     """
     Encrypts a full line of text using AES-256-GCM.
@@ -85,3 +84,16 @@ def decrypt_line(vault_key: bytes, encrypted_line: str) -> str:
     )
 
     return plaintext.decode()
+
+def encrypt_note(vault_key: bytes, note_text: str) -> str:
+    if not note_text: return ""
+    return encrypt_line(vault_key, note_text)
+def decrypt_note(vault_key: bytes, file_contents: str) -> str:
+    if not file_contents: return ""
+    file_contents = file_contents.strip()
+
+    if "|" not in file_contents: return file_contents
+
+    try: return decrypt_line(vault_key, file_contents)
+    except Exception: return file_contents
+

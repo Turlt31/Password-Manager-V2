@@ -1,7 +1,9 @@
 from tkinter import *
+from tkinter import ttk
 from PIL import Image, ImageTk
 import urllib.request
 from io import BytesIO
+from pathlib import Path
 
 from pandas import DataFrame
 import cryption
@@ -16,7 +18,6 @@ import os
 from theme import loadTheme
 import webbrowser
 import pyperclip
-
 
 def get_favicon(url, user):
     with open(f'files/{user}/config/settings.json', 'r') as f:
@@ -164,13 +165,18 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
                 y = root_y + (root_h // 2) - (h // 2)
 
                 win.geometry(f"{w}x{h}+{x-140}+{y+60}")
+            def onClose():
+                editB.config(state="normal")
+                editScreen.destroy()
             editScreen = Toplevel(dataFrame)
             editScreen.resizable(False, False)
             editScreen.geometry("400x570")
             editScreen.title("Edit Password")
             editScreen.iconbitmap('icon/pwm.ico')
             editScreen.configure(bg=BG_PANEL)
+            editScreen.protocol("WM_DELETE_WINDOW", onClose)
             centerWindow(root, editScreen, 400, 570)
+            editB.config(state="disabled")
 
             phN = "Website"
             phU = "Username"
@@ -220,6 +226,12 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
                         widget.config(fg=FG_COLOR_S, justify="center", font=('arial', 25))
         
             def saveUpdates():
+                def isAuthValid(secret: str) -> bool:
+                    try:
+                        pyotp.TOTP(secret).now()
+                        return True
+                    except Exception:
+                        return False
                 site = wnE.get() if not getattr(wnE, "_is_placeholder", False) else ""
                 username = uE.get() if not getattr(uE, "_is_placeholder", False) else ""
                 password = pE.get() if not getattr(pE, "_is_placeholder", False) else ""
@@ -227,10 +239,9 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
 
                 url = f"www.{site.lower()}{selected.get()}" if site else parts[1]
 
-                if auth and auth != "Authentication Code":
-                    newPlainLine = f"{site},{url},{username},{password},{auth}"
-                else:
-                    newPlainLine = f"{site},{url},{username},{password}"
+                if isAuthValid(auth): newPlainLine = f"{site},{url},{username},{password},{auth}"
+                else: newPlainLine = f"{site},{url},{username},{password}"
+                
                 fullAccountList = []
                 with open(f"files/{user}/passwords.txt", 'r') as f:
                     for enc in f.readlines():
@@ -261,8 +272,8 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
             wnE.bind("<FocusOut>", on_focus_out)
 
             tldB =  OptionMenu(editScreen, selected, *tld)
-            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0)
-            tldB["menu"].config(font=('arial', 18))
+            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_BUTTON, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            tldB["menu"].config(font=('arial', 18), bg=BG_BUTTON_ALT, fg=FG_COLOR_S)
             tldB.place(x=280, y=70, height=50, width=110)
 
             uE = Entry(editScreen, font=('arial', 28), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, justify="left")
@@ -378,33 +389,61 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
             def start_totp_label(label):
                 totp = pyotp.TOTP(parts[4].strip('\n'), interval=30)
 
-                def update_code():
-                    nonlocal current_code, cycle_start
+                current_code = None
+                cycle_start = None
+                base_color = "#00ff00"
+                is_hovered = False
 
+                def darkenHex(color, factor=0.8):
+                    r = int(color[1:3], 16)
+                    g = int(color[3:5], 16)
+                    b = int(color[5:7], 16)
+
+                    r = int(r * factor)
+                    g = int(g * factor)
+                    b = int(b * factor)
+
+                    return f"#{r:02x}{g:02x}{b:02x}"
+
+                def updateCode():
+                    nonlocal current_code, cycle_start
                     current_code = totp.now()
                     cycle_start = time.time()
                     label.config(text=current_code)
-                    update_color()
-
-                def update_color():
+                    updateColor()
+                def updateColor():
+                    nonlocal base_color
                     elapsed = time.time() - cycle_start
                     remaining = 30 - elapsed
 
                     if remaining <= 0:
-                        update_code()
+                        updateCode()
                         return
+
                     ratio = remaining / 30
 
                     r = int((1 - ratio) * 255)
                     g = int(ratio * 255)
-                    color = f"#{r:02x}{g:02x}00"
+                    base_color = f"#{r:02x}{g:02x}00"
 
+                    color = darkenHex(base_color) if is_hovered else base_color
                     label.config(fg=color)
-                    label.after(100, update_color)
 
-                current_code = None
-                cycle_start = None
-                update_code()
+                    label.after(100, updateColor)
+
+                def onEnter(event):
+                    nonlocal is_hovered
+                    is_hovered = True
+                    label.config(fg=darkenHex(base_color))
+                def onLeave(event):
+                    nonlocal is_hovered
+                    is_hovered = False
+                    label.config(fg=base_color)
+
+                label.bind("<Enter>", onEnter)
+                label.bind("<Leave>", onLeave)
+
+                updateCode()
 
             Label(dataFrame, text="Auth Code", font=('arial',35, 'bold'), bg=BG_CARD, fg=FG_COLOR_P).place(relx=0.02, rely=0.55)
             authL = Label(dataFrame, font=('arial', 22), bg=BG_CARD)
@@ -650,13 +689,18 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                 y = root_y + (root_h // 2) - (h // 2)
 
                 win.geometry(f"{w}x{h}+{x-140}+{y+60}")
+            def onClose():
+                editB.config(state="normal")
+                editScreen.destroy()
             editScreen = Toplevel(dataFrame)
             editScreen.resizable(False, False)
             editScreen.geometry("400x570")
             editScreen.title("Edit Card")
             editScreen.iconbitmap('icon/pwm.ico')
             editScreen.configure(bg=BG_PANEL)
+            editScreen.protocol("WM_DELETE_WINDOW", onClose)
             centerWindow(root, editScreen, 400, 570)
+            editB.config(state="disabled")
 
             phB = "Bank Name"
             phN = "Name on Card"
@@ -722,10 +766,13 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                     if widget.get() == "":
                         widget.insert(0, phPin)
                         widget.config(fg="grey", justify="center")
-            def format_expiry(event=None):
-                text = expdE.get()
+            
+            def formatExpiry(event):
+                entry = event.widget
+                value = entry.get()
 
-                digits = "".join([c for c in text if c.isdigit()])
+                digits = "".join([c for c in value if c.isdigit()])
+
                 digits = digits[:4]
 
                 formatted = ""
@@ -737,6 +784,52 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                 if expdE.get() != formatted:
                     expdE.delete(0, END)
                     expdE.insert(0, formatted)
+            def formatCard(event):
+                entry = event.widget
+                old = entry.get()
+                cursor_before = entry.index(INSERT)
+
+                digits = ''.join(ch for ch in old if ch.isdigit())
+                digits = digits[:16]
+
+                new = " ".join(digits[i:i+4] for i in range(0, len(digits), 4))
+
+                if old == new:
+                    return
+
+                digits_before_cursor = len(''.join(ch for ch in old[:cursor_before] if ch.isdigit()))
+
+                new_cursor_pos = digits_before_cursor
+                new_cursor_pos += digits_before_cursor // 4
+
+                entry.delete(0, END)
+                entry.insert(0, new)
+
+                if new_cursor_pos <= len(new): entry.icursor(new_cursor_pos)
+                else: entry.icursor(len(new))
+            def formatCvc(event):
+                entry = event.widget
+                value = entry.get()
+
+                digits = ''.join(ch for ch in value if ch.isdigit())
+
+                digits = digits[:3]
+
+                if entry.get() != digits:
+                    entry.delete(0, END)
+                    entry.insert(0, digits)
+            def formatPin(event):
+                entry = event.widget
+                value = entry.get()
+
+                digits = ''.join(ch for ch in value if ch.isdigit())
+
+                digits = digits[:4]
+
+                if entry.get() != digits:
+                    entry.delete(0, END)
+                    entry.insert(0, digits)
+
             def saveUpdates():
                 bank = bE.get() if not getattr(bE, "_is_placeholder", False) else ""
                 name = nE.get() if not getattr(nE, "_is_placeholder", False) else ""
@@ -782,8 +875,8 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             bE.bind("<FocusOut>", on_focus_out)
 
             tldB =  OptionMenu(editScreen, selected, *tld)
-            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0)
-            tldB["menu"].config(font=('arial', 18))
+            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_BUTTON, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            tldB["menu"].config(font=('arial', 18), bg=BG_BUTTON_ALT, fg=FG_COLOR_S)
             tldB.place(x=280, y=70, height=50, width=110)
 
             nE = Entry(editScreen, font=('arial', 28), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, justify="left")
@@ -797,25 +890,28 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             cE.insert(0, parts[3])
             cE.bind("<FocusIn>", on_focus_in)
             cE.bind("<FocusOut>", on_focus_out)
+            cE.bind("<KeyRelease>", formatCard)
 
             expdE = Entry(editScreen, font=('arial', 28), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             expdE.place(x=10, y=285, height=50, width=380)
             expdE.insert(0, parts[4])
             expdE.bind("<FocusIn>", on_focus_in)
             expdE.bind("<FocusOut>", on_focus_out)
-            expdE.bind("<KeyRelease>", format_expiry)
+            expdE.bind("<KeyRelease>", formatExpiry)
 
             cvcE = Entry(editScreen, font=('arial', 28), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             cvcE.place(x=10, y=365, height=50, width=380)
             cvcE.insert(0, parts[5])
             cvcE.bind("<FocusIn>", on_focus_in)
             cvcE.bind("<FocusOut>", on_focus_out)
+            cvcE.bind("<KeyRelease>", formatCvc)
 
             pinE = Entry(editScreen, font=('arial', 28), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             pinE.place(x=10, y=430, height=50, width=380)
             pinE.insert(0, parts[6].strip('\n'))
             pinE.bind("<FocusIn>", on_focus_in)
             pinE.bind("<FocusOut>", on_focus_out)
+            pinE.bind("<KeyRelease>", formatPin)
 
             saveB = Button(editScreen, text="Save Card", font=('arial', 30), command=saveUpdates, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1)
             saveB.place(x=10, y=510, height=50, width=380)
@@ -873,8 +969,8 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             if widget == editB: editB.configure(image=editIconSTK)
             if widget == deleteB: deleteB.configure(image=deleteIconSTK)
             if widget == showB:
-                if showVar[0]:showB.configure(image=hideIconSTK)
-                else: showB.configure(image=showIconSTK)
+                if showVar[0]:showB.configure(image=showIconSTK)
+                else: showB.configure(image=hideIconSTK)
         def onHoverLeave(event):
             widget = event.widget
 
@@ -887,8 +983,8 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             if widget == editB: editB.configure(image=editIconPTK)
             if widget == deleteB: deleteB.configure(image=deleteIconPTK)
             if widget == showB:
-                if showVar[0]: showB.configure(image=hideIconPTK)
-                else: showB.configure(image=showIconPTK)
+                if showVar[0]: showB.configure(image=showIconPTK)
+                else: showB.configure(image=hideIconPTK)
 
         Label(dataFrame, text=parts[0], font=('arial', 32, 'bold'), bg=BG_CARD, fg=FG_COLOR_P).place(relx=0.25, rely=0.03)
         linkL = Label(dataFrame, text=parts[1], font=('arial', 24, 'underline'), bg=BG_CARD, fg=ACCENT_BLUE)
@@ -972,7 +1068,6 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                 f.write(cryption.encrypt_line(vaultKey, record) + "\n")
 
         cards(plainList, inner_frame, contFrame, canvas, dataFrame, root, user, searchParam, vaultKey)
-
 
     filteredCards = []
     cardListLower = [c.lower() for c in cardList]
@@ -1291,7 +1386,7 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                         newPasw.insert(0, "New Password")
                         newPasw.config(fg=FG_COLOR_S)
             def changePasw():
-                nonlocal vaultKey  # use current session key and allow updating it
+                nonlocal vaultKey
 
                 old_pw = oldPasw.get()
                 new_pw = newPasw.get()
@@ -1300,17 +1395,13 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                     Label(dataFrame, text="Please fill in both old and new password", font=('arial', 20), fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
                     return
 
-                login_path = "files/logins.txt"
-
-                # ---- LOAD LOGIN FILE ----
-                with open(login_path, 'r') as f:
+                with open("files/logins.txt", 'r') as f:
                     login_lines = f.readlines()
 
                 user_idx = None
                 stored_salt_b64 = None
                 stored_hash_b64 = None
 
-                # ---- FIND THIS USER ----
                 for idx, line in enumerate(login_lines):
                     parts = line.strip().split(',')
                     if len(parts) >= 3:
@@ -1322,26 +1413,21 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                             break
 
                 if user_idx is None:
-                    Label(dataFrame, text="User not found", font=('arial', 20),
-                        fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
+                    Label(dataFrame, text="User not found", font=('arial', 20), fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
                     return
 
-                # ---- VERIFY OLD PASSWORD ----
                 try:
                     salt = base64.b64decode(stored_salt_b64)
                     expected_hash = base64.b64decode(stored_hash_b64)
                     derived = cryption.deriveMasterKey(old_pw, salt)
                 except Exception:
-                    Label(dataFrame, text="Login record corrupted",
-                        font=('arial', 20), fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
+                    Label(dataFrame, text="Login record corrupted", font=('arial', 20), fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
                     return
 
                 if derived != expected_hash:
-                    Label(dataFrame, text="Wrong old password",
-                        font=('arial', 20), fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
+                    Label(dataFrame, text="Wrong old password", font=('arial', 20), fg="red", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
                     return
 
-                # ---- DECRYPT VAULT USING OLD KEY ----
                 passwords_plain = []
                 try:
                     with open(f"files/{user}/passwords.txt", 'r') as f:
@@ -1364,39 +1450,31 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                 except FileNotFoundError:
                     cards_plain = []
 
-                # ---- CREATE NEW MASTER KEY ----
                 new_salt = os.urandom(16)
                 new_key = cryption.deriveMasterKey(new_pw, new_salt)
 
                 new_salt_b64 = base64.b64encode(new_salt).decode()
                 new_hash_b64 = base64.b64encode(new_key).decode()
 
-                # ---- STORE NEW LOGIN RECORD IN FORMAT salt,hash,user ----
                 new_login_line = f"{new_salt_b64},{new_hash_b64},{user}\n"
                 login_lines[user_idx] = new_login_line
 
-                with open(login_path, 'w') as f:
+                with open("files/logins.txt", 'w') as f:
                     f.writelines(login_lines)
 
-                # ---- RE-ENCRYPT PASSWORDS ----
                 if passwords_plain:
                     with open(f"files/{user}/passwords.txt", 'w') as f:
                         for rec in passwords_plain:
-                            enc = cryption.encrypt_line(new_key, rec)
-                            f.write(enc + "\n")
+                            f.write(cryption.encrypt_line(new_key, rec) + "\n")
 
-                # ---- RE-ENCRYPT CARDS ----
                 if cards_plain:
                     with open(f"files/{user}/cards.txt", 'w') as f:
                         for rec in cards_plain:
-                            enc = cryption.encrypt_line(new_key, rec)
-                            f.write(enc + "\n")
+                            f.write(cryption.encrypt_line(new_key, rec) + "\n")
 
-                # ---- UPDATE IN-MEMORY vaultKey ----
                 vaultKey = new_key
 
-                Label(dataFrame, text="Master password changed and vault re-encrypted",
-                    font=('arial', 20), fg="green", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
+                Label(dataFrame, text="Master password changed and vault re-encrypted", font=('arial', 20), fg="green", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
 
             oldPasw = Entry(dataFrame, font=('arial', 32), bg=BG_INPUT, fg=FG_COLOR_S, relief='flat', bd=0, justify='center')
             oldPasw.place(relx=0.5, rely=0.17, relwidth=0.8, relheight=0.08, anchor="center")
@@ -1513,7 +1591,115 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
     canvas.config(scrollregion=(0, 0, canvas.winfo_width(), total_height))
 
 
-def notes(inner_frame, contFrame, canvas, dataFrame, user):
-    for widget in inner_frame.winfo_children():
-        if widget != contFrame: widget.destroy()
-    for widget in dataFrame.winfo_children(): widget.destroy()
+def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
+    _clear_content(inner_frame, contFrame, dataFrame)
+    yPos = 10
+
+    with open(f'files/{user}/config/settings.json', 'r') as f:
+        data = json.load(f)
+        currentTheme = loadTheme(data["settings"]["General Settings"]["theme"])
+
+    BG_PANEL = currentTheme["BG_PANEL"]
+    BG_LIST = currentTheme["BG_LIST"]
+    BG_CARD = currentTheme["BG_CARD"]
+
+    BG_INPUT = currentTheme["BG_INPUT"]
+    BG_BUTTON = currentTheme["BG_BUTTON"]
+    BG_BUTTON_ALT = currentTheme["BG_BUTTON_ALT"]
+
+    FG_COLOR_P = currentTheme["FG_PRIMARY"]
+    FG_COLOR_S = currentTheme["FG_SECONDARY"]
+    FG_HIGHLIGHT = currentTheme["FG_MUTED"]
+    ACCENT_BLUE = currentTheme["ACCENT_BLUE"]
+    ACCENT_BLUE_GLOW = currentTheme["ACCENT_BLUE_GLOW"]
+
+    def displayNote(noteFile, noteDesc, event):
+        for widget in dataFrame.winfo_children():
+            widget.destroy()
+        
+        def save_note(event=None):
+            content = notesText.get("1.0", "end-1c")
+            encrypted = cryption.encrypt_note(vaultKey, content)
+
+            with open(f"files/{user}/notes/{noteFile}-{noteDesc}.txt", "w", encoding="utf-8") as f:
+                f.write(encrypted)
+
+
+        Label(dataFrame, text=noteFile, font=("arial", 32, 'bold'), bg=BG_CARD, fg=FG_COLOR_P ).place(relx=0.5, rely=0.05, anchor="center")
+
+        textFrame = Frame(dataFrame, bg=BG_CARD)
+        textFrame.place(relx=0, rely=0.12, relwidth=1, relheight=0.88)
+
+        style = ttk.Style()
+        style.theme_use("default")
+
+        style.layout("Vertical.TScrollbar", [
+        ('Vertical.Scrollbar.trough', {
+            'children': [
+                ('Vertical.Scrollbar.thumb', {'unit': '1', 'sticky': 'nswe'})
+            ],
+            'sticky': 'ns'
+        })
+    ])
+        style.configure(
+            "Vertical.TScrollbar",
+            background="#3a3f47",
+            troughcolor=BG_INPUT,
+            bordercolor=BG_INPUT,
+            arrowcolor="#ffffff",
+            relief="flat",
+            borderwidth=0
+        )
+        style.map(
+            "Vertical.TScrollbar",
+            background=[("active", "#505660")]
+        )
+
+        scrollbar = ttk.Scrollbar(textFrame, style="Vertical.TScrollbar")
+        scrollbar.place(relx=0.98, rely=0, relwidth=0.02, relheight=1)
+
+        notesText = Text( textFrame, bg=BG_INPUT, fg=FG_COLOR_P, font=('arial', 20), borderwidth=2, relief="solid", yscrollcommand=scrollbar.set, wrap="word")
+        notesText.place(relx=0, rely=0, relwidth=0.98, relheight=1)
+
+        scrollbar.config(command=notesText.yview)
+        notesText.focus_set()
+        root.bind("<Control-s>", save_note)
+
+
+        if os.path.exists(f"files/{user}/notes/{noteFile}-{noteDesc}.txt"):
+            try:
+                with open(f"files/{user}/notes/{noteFile}-{noteDesc}.txt", "r", encoding="utf-8") as f:
+                    content = f.read()
+                content = cryption.decrypt_note(vaultKey, content)
+                notesText.insert("1.0", content)
+            except Exception as e:
+                notesText.insert("1.0", f"[Error loading note]\n{e}")
+        else:
+            notesText.insert("1.0", "")
+    
+
+    notesFiles = [ note.stem.split("-") for note in Path(f"files/{user}/notes").glob("*.txt") ]
+
+    for note in notesFiles:
+        accFrame = Frame(inner_frame, bg=BG_CARD, bd=0, highlightthickness=0)
+        accFrame.place(x=10, y=yPos, relwidth=0.95, height=80)
+        accFrame.bind("<Button-1>", lambda e, n=note[0], d=note[1]: displayNote(n, d, e))
+        accFrame.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+        noteNameL = Label(accFrame, text=note[0], font=('arial', 30), bg=BG_CARD, fg=FG_COLOR_P)
+        noteNameL.place(x=5, y=2)
+        noteNameL.bind("<Button-1>", lambda e, n=note[0], d=note[1]: displayNote(n, d, e))
+        noteNameL.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+        noteDescL = Label(accFrame, text=note[1], font=('arial', 14), bg=BG_CARD, fg=FG_COLOR_S)
+        noteDescL.place(x=5, y=50)
+        noteDescL.bind("<Button-1>", lambda e, n=note[0], d=note[1]: displayNote(n, d, e))
+        noteDescL.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+        yPos += 100
+    
+    inner_frame.update_idletasks()
+    total_height = yPos + 20
+    inner_frame.config(height=total_height, width=canvas.winfo_width())
+    canvas.update_idletasks()
+    canvas.config(scrollregion=(0, 0, canvas.winfo_width(), total_height))

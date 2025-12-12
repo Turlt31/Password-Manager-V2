@@ -137,6 +137,7 @@ def loginScreen():
                     f.write(f"{passwordData["salt"]},{passwordData["login_hash"]},{username}\n")
                 os.mkdir(f"files/{username}")
                 os.mkdir(f"files/{username}/config")
+                os.mkdir(f"files/{username}/notes")
 
 
                 [open(f"files/{username}/{file}", 'w').close() for file in ["cards.txt", "passwords.txt", "notes.txt"]]
@@ -241,7 +242,6 @@ def loginScreen():
     regB.bind("<Button-1>", register)
     regB.bind("<Enter>", onHoverEnter)
     regB.bind("<Leave>", onHoverLeave)
-
 def mainScreen(user, vaultKey):
     for widget in root.winfo_children(): widget.destroy()
     placeholder = "Search..."
@@ -287,6 +287,7 @@ def mainScreen(user, vaultKey):
             searchE.config(state="normal")
             loginsB.config(fg=ACCENT_BLUE, image=loginsIconBPTK)
             cardsB.config(fg=FG_COLOR_P, image=cardsIconWPTK)
+            notesB.config(fg=FG_COLOR_P, image=notesIconWPTK)
             menuOpen = "pasw"
             passwordList, cardList = load(user)
             apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
@@ -295,9 +296,19 @@ def mainScreen(user, vaultKey):
             searchE.config(state="normal")
             cardsB.config(fg=ACCENT_BLUE, image=cardsIconBPTK)
             loginsB.config(fg=FG_COLOR_P, image=loginsIconWPTK)
+            notesB.config(fg=FG_COLOR_P, image=notesIconWPTK)
             menuOpen = "card"
             passwordList, cardList = load(user)
             apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
+        if widget == notesB:
+            addB.config(state="normal")
+            searchE.config(state="normal")
+            cardsB.config(fg=FG_COLOR_P, image=cardsIconWPTK)
+            loginsB.config(fg=FG_COLOR_P, image=loginsIconWPTK)
+            notesB.config(fg=ACCENT_BLUE, image=notesIconBPTK)
+            menuOpen = "note"
+            passwordList, cardList = load(user)
+            apps.notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey)
         if widget == logoutB: loginScreen()
         if widget == settingsB:
             addB.config(state="disabled")
@@ -316,6 +327,10 @@ def mainScreen(user, vaultKey):
         if widget == cardsB:
             if menuOpen == "card": cardsB.configure(fg=ACCENT_BLUE_GLOW, bg=BG_PANEL, image=cardsIconBSTK)
             else: cardsB.configure(fg=FG_COLOR_S, bg=BG_PANEL, image=cardsIconWSTK)
+        if widget == notesB:
+            if menuOpen == "note": notesB.configure(fg=ACCENT_BLUE_GLOW, bg=BG_PANEL, image=notesIconBSTK)
+            else: notesB.configure(fg=FG_COLOR_S, bg=BG_PANEL, image=notesIconWSTK)
+
         if widget == logoutB: logoutB.configure(fg=FG_COLOR_S, bg=BG_BUTTON_ALT, image=logoutIconGTK)
         if widget == settingsB: settingsB.configure(fg=FG_COLOR_S, bg=BG_BUTTON_ALT, image=settingsIconGTK)
     def onHoverLeave(event): 
@@ -327,6 +342,9 @@ def mainScreen(user, vaultKey):
         if widget == cardsB: 
             if menuOpen == "card": cardsB.configure(fg=ACCENT_BLUE, bg=BG_PANEL, image=cardsIconBPTK)
             else: cardsB.configure(fg=FG_COLOR_P, bg=BG_PANEL, image=cardsIconWPTK)
+        if widget == notesB: 
+            if menuOpen == "note": notesB.configure(fg=ACCENT_BLUE, bg=BG_PANEL, image=notesIconBPTK)
+            else: notesB.configure(fg=FG_COLOR_P, bg=BG_PANEL, image=notesIconWPTK)
         if widget == logoutB: logoutB.configure(fg=FG_COLOR_P, bg=BG_BUTTON_ALT, image=logoutIconWTK)
         if widget == settingsB: settingsB.configure(fg=FG_COLOR_P, bg=BG_BUTTON_ALT, image=settingsIconWTK)
     def onFocusIn(event):
@@ -357,13 +375,18 @@ def mainScreen(user, vaultKey):
             y = root_y + (root_h // 2) - (h // 2)
 
             win.geometry(f"{w}x{h}+{x-140}+{y+60}")
+        def onClose():
+            addB.config(state="normal")
+            addScreen.destroy()
         global menuOpen
         addScreen = Toplevel(root)
         addScreen.resizable(False, False)
         addScreen.geometry(f"400x570")
         addScreen.iconbitmap('icon/pwm.ico')
         addScreen.configure(bg=BG_PANEL)
+        addScreen.protocol("WM_DELETE_WINDOW", onClose)
         centerWindow(root, addScreen, 400, 570)
+        addB.config(state="disabled")
 
         if menuOpen == "pasw":
             addScreen.title("Add Password")
@@ -375,7 +398,6 @@ def mainScreen(user, vaultKey):
             
             tld = [".com", ".net", ".lt", ".org", ".gov", ".io"]
             selected = StringVar(value=tld[0])
-
 
             def on_focus_in(event):
                 widget = event.widget
@@ -446,6 +468,12 @@ def mainScreen(user, vaultKey):
                 pE.insert(0, "".join(password))
                 pE.config(fg=FG_COLOR_P, justify="left")
             def savePassword():
+                def isAuthValid(secret: str) -> bool:
+                    try:
+                        pyotp.TOTP(secret).now()
+                        return True
+                    except Exception:
+                        return False
                 passwordList = []
                 website = wnE.get()
                 websiteLink = f"www.{website.lower()}{selected.get()}"
@@ -453,8 +481,11 @@ def mainScreen(user, vaultKey):
                 password = pE.get()
                 auth = authE.get()
 
-                if auth == phAuth: account = cryption.encrypt_line(vaultKey, f"{website},{websiteLink},{username},{password}")
-                else: account = cryption.encrypt_line(vaultKey, f"{website},{websiteLink},{username},{password},{auth}")
+                if isAuthValid(auth):
+                    account = cryption.encrypt_line(vaultKey, f"{website},{websiteLink},{username},{password},{auth}")
+                else:
+                    account = cryption.encrypt_line(vaultKey, f"{website},{websiteLink},{username},{password}")
+                     
 
                 with open(f"files/{user}/passwords.txt", 'a') as f: f.write(account+'\n')
                 with open(f"files/{user}/passwords.txt", 'r') as f: data = f.readlines()
@@ -471,8 +502,8 @@ def mainScreen(user, vaultKey):
             wnE.bind("<FocusOut>", on_focus_out)
 
             tldB =  OptionMenu(addScreen, selected, *tld)
-            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
-            tldB["menu"].config(font=('arial', 18))
+            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_BUTTON, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            tldB["menu"].config(font=('arial', 18), bg=BG_BUTTON_ALT, fg=FG_COLOR_S)
             tldB.place(x=280, y=70, height=50, width=110)
 
             uE = Entry(addScreen, font=('arial', 24), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
@@ -519,7 +550,7 @@ def mainScreen(user, vaultKey):
             tld = [".com", ".net", ".lt", ".org", ".gov", ".io"]
             selected = StringVar(value=tld[0])
 
-            def on_focus_in(event):
+            def onFocusIn(event):
                 widget = event.widget
 
                 if widget == bE:
@@ -546,7 +577,7 @@ def mainScreen(user, vaultKey):
                     if widget.get() == phPin:
                         widget.delete(0, END)
                         widget.config(fg=FG_COLOR_P, justify="center") 
-            def on_focus_out(event):
+            def onFocusOut(event):
                 widget = event.widget
 
                 if widget == bE:
@@ -573,10 +604,11 @@ def mainScreen(user, vaultKey):
                     if widget.get() == "":
                         widget.insert(0, phPin)
                         widget.config(fg=FG_COLOR_S, justify="center")
-            def format_expiry(event=None):
-                text = expdE.get()
+            def formatExpiry(event):
+                entry = event.widget
+                value = entry.get()
 
-                digits = "".join([c for c in text if c.isdigit()])
+                digits = "".join([c for c in value if c.isdigit()])
 
                 digits = digits[:4]
 
@@ -589,6 +621,52 @@ def mainScreen(user, vaultKey):
                 if expdE.get() != formatted:
                     expdE.delete(0, END)
                     expdE.insert(0, formatted)
+            def formatCard(event):
+                entry = event.widget
+                old = entry.get()
+                cursor_before = entry.index(INSERT)
+
+                digits = ''.join(ch for ch in old if ch.isdigit())
+                digits = digits[:16]
+
+                new = " ".join(digits[i:i+4] for i in range(0, len(digits), 4))
+
+                if old == new:
+                    return
+
+                digits_before_cursor = len(''.join(ch for ch in old[:cursor_before] if ch.isdigit()))
+
+                new_cursor_pos = digits_before_cursor
+                new_cursor_pos += digits_before_cursor // 4
+
+                entry.delete(0, END)
+                entry.insert(0, new)
+
+                if new_cursor_pos <= len(new): entry.icursor(new_cursor_pos)
+                else: entry.icursor(len(new))
+            def formatCvc(event):
+                entry = event.widget
+                value = entry.get()
+
+                digits = ''.join(ch for ch in value if ch.isdigit())
+
+                digits = digits[:3]
+
+                if entry.get() != digits:
+                    entry.delete(0, END)
+                    entry.insert(0, digits)
+            def formatPin(event):
+                entry = event.widget
+                value = entry.get()
+
+                digits = ''.join(ch for ch in value if ch.isdigit())
+
+                digits = digits[:4]
+
+                if entry.get() != digits:
+                    entry.delete(0, END)
+                    entry.insert(0, digits)
+
             def saveCard():
                 cardDetails = cryption.encrypt_line(vaultKey, f"{bE.get()},www.{bE.get().lower()}{selected.get()},{nE.get()},{cE.get()},{expdE.get()},{cvcE.get()},{pinE.get()}")
 
@@ -603,47 +681,103 @@ def mainScreen(user, vaultKey):
             bE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             bE.place(x=10, y=70, height=50, width=260)
             bE.insert(0, phB)
-            bE.bind("<FocusIn>", on_focus_in)
-            bE.bind("<FocusOut>", on_focus_out)
+            bE.bind("<FocusIn>", onFocusIn)
+            bE.bind("<FocusOut>", onFocusOut)
 
             tldB =  OptionMenu(addScreen, selected, *tld)
-            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_INPUT, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
-            tldB["menu"].config(font=('arial', 18))
+            tldB.config(font=('arial', 26), fg=FG_COLOR_P, bg=BG_BUTTON, relief="flat", borderwidth=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            tldB["menu"].config(font=('arial', 18), bg=BG_BUTTON_ALT, fg=FG_COLOR_S)
             tldB.place(x=280, y=70, height=50, width=110)
 
             nE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             nE.place(x=10, y=135, height=50, width=380)
             nE.insert(0, phN)
-            nE.bind("<FocusIn>", on_focus_in)
-            nE.bind("<FocusOut>", on_focus_out)
+            nE.bind("<FocusIn>", onFocusIn)
+            nE.bind("<FocusOut>", onFocusOut)
 
             cE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             cE.place(x=10, y=220, height=50, width=380)
             cE.insert(0, phC)
-            cE.bind("<FocusIn>", on_focus_in)
-            cE.bind("<FocusOut>", on_focus_out)
+            cE.bind("<FocusIn>", onFocusIn)
+            cE.bind("<FocusOut>", onFocusOut)
+            cE.bind("<KeyRelease>", formatCard)
 
             expdE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             expdE.place(x=10, y=285, height=50, width=380)
             expdE.insert(0, phExpd)
-            expdE.bind("<FocusIn>", on_focus_in)
-            expdE.bind("<FocusOut>", on_focus_out)
-            expdE.bind("<KeyRelease>", format_expiry)
+            expdE.bind("<FocusIn>", onFocusIn)
+            expdE.bind("<FocusOut>", onFocusOut)
+            expdE.bind("<KeyRelease>", formatExpiry)
 
             cvcE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             cvcE.place(x=10, y=365, height=50, width=380)
             cvcE.insert(0, phCvc)
-            cvcE.bind("<FocusIn>", on_focus_in)
-            cvcE.bind("<FocusOut>", on_focus_out)
+            cvcE.bind("<FocusIn>", onFocusIn)
+            cvcE.bind("<FocusOut>", onFocusOut)
+            cvcE.bind("<KeyRelease>", formatCvc)
 
             pinE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
             pinE.place(x=10, y=430, height=50, width=380)
             pinE.insert(0, phPin)
-            pinE.bind("<FocusIn>", on_focus_in)
-            pinE.bind("<FocusOut>", on_focus_out)
+            pinE.bind("<FocusIn>", onFocusIn)
+            pinE.bind("<FocusOut>", onFocusOut)
+            pinE.bind("<KeyRelease>", formatPin)
 
             saveB = Button(addScreen, text="Save Card", font=('arial', 30), command=saveCard, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             saveB.place(x=10, y=510, height=50, width=380)
+        if menuOpen == "note":
+            addScreen.title("Add New Note File")
+            Label(addScreen, text="Add Note File", font=('arial', 32), bg=BG_PANEL, fg=FG_COLOR_P).place(x=70, y=5)
+
+            notesNamePH = "Notes Name"
+            notesDescPH = "Notes Description"
+
+            def onFocusIn(event):
+                widget = event.widget
+
+                if widget == notesNameE:
+                    if widget.get() == notesNamePH:
+                        widget.delete(0, END)
+                        widget.config(fg=FG_COLOR_P, justify="left")
+                elif widget == notesDescE:
+                    if widget.get() == notesDescPH:
+                        widget.delete(0, END)
+                        widget.config(fg=FG_COLOR_P, justify="left") 
+            def onFocusOut(event):
+                widget = event.widget
+
+                if widget == notesNameE:
+                    if widget.get() == "":
+                        widget.insert(0, notesNamePH)
+                        widget.config(fg=FG_COLOR_S, justify="center")
+                elif widget == notesDescE:
+                    if widget.get() == "":
+                        widget.insert(0, notesDescPH)
+                        widget.config(fg=FG_COLOR_S, justify="center")
+            def createNewFile():
+                notesName = notesNameE.get()
+                notesDesc = notesDescE.get()
+                if notesName != notesNamePH:
+                    if notesDesc != notesDescPH:
+                        with open(f"files/{user}/notes/{notesName}.txt", 'w') as f: f.write("")
+
+                apps.notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey)
+
+
+            notesNameE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            notesNameE.place(x=10, y=70, height=50, width=380)
+            notesNameE.insert(0, notesNamePH)
+            notesNameE.bind("<FocusIn>", onFocusIn)
+            notesNameE.bind("<FocusOut>", onFocusOut)
+
+            notesDescE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
+            notesDescE.place(x=10, y=135, height=50, width=380)
+            notesDescE.insert(0, notesDescPH)
+            notesDescE.bind("<FocusIn>", onFocusIn)
+            notesDescE.bind("<FocusOut>", onFocusOut)
+
+            saveB = Button(addScreen, text="Create New File", font=('arial', 30), command=createNewFile, bg=BG_BUTTON, fg=FG_COLOR_P, relief="flat", borderwidth=1, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
+            saveB.place(x=10, y=510, height=50, width=380)  
 
     root.columnconfigure(0, weight=3)
     root.columnconfigure(1, weight=1)
@@ -757,6 +891,26 @@ def mainScreen(user, vaultKey):
     cardsB.bind("<Leave>", onHoverLeave)
     cardsB.bind("<Button-1>", onClick)
 
+    notesIconWP = Image.open("icon/buttonImg/notes_WP.png").resize((52,52), Image.Resampling.LANCZOS)
+    notesIconWPTK = ImageTk.PhotoImage(notesIconWP)
+    notesIconWS = Image.open("icon/buttonImg/notes_WS.png").resize((52,52), Image.Resampling.LANCZOS)
+    notesIconWSTK = ImageTk.PhotoImage(notesIconWS)
+
+    notesIconBP = Image.open("icon/buttonImg/notes_BP.png").resize((52,52), Image.Resampling.LANCZOS)
+    notesIconBPTK = ImageTk.PhotoImage(notesIconBP)
+    notesIconBS = Image.open("icon/buttonImg/notes_BS.png").resize((52,52), Image.Resampling.LANCZOS)
+    notesIconBSTK = ImageTk.PhotoImage(notesIconBS)
+
+    notesB = Label(menuFrame, text=" Notes", image=notesIconWPTK, compound='left', font=('arial', 32), anchor="w", bg=BG_PANEL, fg=FG_COLOR_P)
+    notesB.place(relx=0.05, y=260, relwidth=0.9, height=60)
+    notesB.image = notesIconWPTK
+    notesB.image = notesIconWSTK
+    notesB.image = notesIconBPTK
+    notesB.image = notesIconBSTK
+    notesB.bind("<Enter>", onHoverEnter)
+    notesB.bind("<Leave>", onHoverLeave)
+    notesB.bind("<Button-1>", onClick)
+
     settingsIconW = Image.open("icon/buttonImg/settings_W.png").convert("RGBA")
     settingsIconW = settingsIconW.resize((52,52))
     settingsIconWTK = ImageTk.PhotoImage(settingsIconW)
@@ -795,10 +949,14 @@ def mainScreen(user, vaultKey):
     elif menuOpen == "card":
         apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
         cardsB.config(fg=ACCENT_BLUE, image=cardsIconBPTK)
+    elif menuOpen == "note":
+        apps.notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey)
+        notesB.config(fg=ACCENT_BLUE, image=notesIconBPTK)
     elif menuOpen == "sett":
         cardsB.config(fg=FG_COLOR_P, image=cardsIconWPTK)
         loginsB.config(fg=FG_COLOR_P, image=loginsIconWPTK)
-        apps.settings(inner_frame, contFrame, canvas, dataFrame, user)
+        notesB.config(fg=FG_COLOR_P, image=notesIconWPTK)
+        apps.settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey)
 
 loginScreen()
 
