@@ -44,11 +44,9 @@ def get_favicon(url, user):
                 image = image.resize((128, 128), Image.Resampling.LANCZOS)
             image.save(cache_path, "PNG", quality=95, optimize=True)
             
-            print(cache_path)
             return cache_path
         
         except Exception as e:
-            print(f"Failed to fetch favicon for {url}: {e}")
             return "icon/favicons/worldwide.png"
     else: return "icon/favicons/worldwide.png"
 def _clear_content(inner_frame: Frame, contFrame: Frame, dataFrame: Frame) -> None:
@@ -362,7 +360,7 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
             icon_label = Label(dataFrame, image=favicon_photo, bg=BG_CARD)
             icon_label.image = favicon_photo
             icon_label.place(relx=0.02, rely=0.02, width=100, height=100)
-        except: print("no")
+        except: pass
 
         Label(dataFrame, text=parts[0], font=('arial', 32, 'bold'), bg=BG_CARD, fg=FG_COLOR_P).place(relx=0.25, rely=0.03)
         linkL = Label(dataFrame, text=parts[1], font=('arial', 24, 'underline'), bg=BG_CARD, fg=ACCENT_BLUE)
@@ -534,7 +532,7 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
                 icon_label.bind("<Button-1>", lambda e, p=parts, ln=line: displayPassword(p, ln, e))
                 icon_label.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
             except Exception as e:
-                print(f"Failed to display favicon: {e}")
+                pass
 
         siteL = Label(accFrame, text=parts[0], font=('arial', 28), bg=BG_CARD, fg=FG_COLOR_P)
         siteL.place(x=80, y=2)
@@ -946,7 +944,7 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             icon_label = Label(dataFrame, image=favicon_photo, bg=BG_CARD)
             icon_label.image = favicon_photo
             icon_label.place(relx=0.02, rely=0.02, width=100, height=100)
-        except: print("no")
+        except: pass
 
         def onClick(event):
             widget = event.widget
@@ -1101,7 +1099,6 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                 icon_label.bind("<Button-1>", lambda e, p=parts, ln=line: displayCard(p, ln, e))
                 icon_label.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
             except Exception as e:
-                print(f"Failed to display favicon: {e}")
                 pass
 
         bankNameL = Label(accFrame, text=parts[0], font=('arial', 28), bg=BG_CARD, fg=FG_COLOR_P)
@@ -1433,22 +1430,31 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                     with open(f"files/{user}/passwords.txt", 'r') as f:
                         for enc_line in f:
                             enc_line = enc_line.strip()
-                            if not enc_line:
-                                continue
-                            passwords_plain.append(cryption.decrypt_line(vaultKey, enc_line))
-                except FileNotFoundError:
-                    passwords_plain = []
+                            if enc_line: passwords_plain.append(cryption.decrypt_line(vaultKey, enc_line))
+                except FileNotFoundError: pass
 
                 cards_plain = []
                 try:
                     with open(f"files/{user}/cards.txt", 'r') as f:
                         for enc_line in f:
                             enc_line = enc_line.strip()
-                            if not enc_line:
-                                continue
-                            cards_plain.append(cryption.decrypt_line(vaultKey, enc_line))
-                except FileNotFoundError:
-                    cards_plain = []
+                            if enc_line: cards_plain.append(cryption.decrypt_line(vaultKey, enc_line))
+                except FileNotFoundError: pass
+
+                notes_dir = f"files/{user}/notes"
+                notes_plain = {}
+
+                if os.path.isdir(notes_dir):
+                    for filename in os.listdir(notes_dir):
+                        path = os.path.join(notes_dir, filename)
+                        if not os.path.isfile(path): continue
+
+                        try:
+                            with open(path, "r", encoding="utf-8") as f: raw = f.read()
+
+                            content = cryption.decrypt_note(vaultKey, raw)
+                            notes_plain[path] = content
+                        except Exception: continue
 
                 new_salt = os.urandom(16)
                 new_key = cryption.deriveMasterKey(new_pw, new_salt)
@@ -1456,8 +1462,7 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                 new_salt_b64 = base64.b64encode(new_salt).decode()
                 new_hash_b64 = base64.b64encode(new_key).decode()
 
-                new_login_line = f"{new_salt_b64},{new_hash_b64},{user}\n"
-                login_lines[user_idx] = new_login_line
+                login_lines[user_idx] = f"{new_salt_b64},{new_hash_b64},{user}\n"
 
                 with open("files/logins.txt", 'w') as f:
                     f.writelines(login_lines)
@@ -1472,10 +1477,13 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                         for rec in cards_plain:
                             f.write(cryption.encrypt_line(new_key, rec) + "\n")
 
+                for path, content in notes_plain.items():
+                    cryption.save_note(new_key, path, content)
+
                 vaultKey = new_key
 
                 Label(dataFrame, text="Master password changed and vault re-encrypted", font=('arial', 20), fg="green", bg=BG_CARD).place(relx=0.5, rely=0.55, anchor="center")
-
+            
             oldPasw = Entry(dataFrame, font=('arial', 32), bg=BG_INPUT, fg=FG_COLOR_S, relief='flat', bd=0, justify='center')
             oldPasw.place(relx=0.5, rely=0.17, relwidth=0.8, relheight=0.08, anchor="center")
             oldPasw.insert(0, "Old Password")
@@ -1589,8 +1597,6 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
     inner_frame.config(height=total_height, width=canvas.winfo_width())
     canvas.update_idletasks()
     canvas.config(scrollregion=(0, 0, canvas.winfo_width(), total_height))
-
-
 def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
     _clear_content(inner_frame, contFrame, dataFrame)
     yPos = 10
@@ -1618,14 +1624,34 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
             widget.destroy()
         
         def save_note(event=None):
+            nonlocal isEdited
             content = notesText.get("1.0", "end-1c")
             encrypted = cryption.encrypt_note(vaultKey, content)
 
+            isEdited = False
+            updateTitle()
+
             with open(f"files/{user}/notes/{noteFile}-{noteDesc}.txt", "w", encoding="utf-8") as f:
                 f.write(encrypted)
+        def updateTitle():
+            if isEdited:
+                titleL.config(text=f"{noteName}*")
+            else:
+                titleL.config(text=noteName)
+        def onTextModified(event=None):
+            nonlocal isEdited
 
+            if not isEdited:
+                isEdited = True
+                updateTitle()
 
-        Label(dataFrame, text=noteFile, font=("arial", 32, 'bold'), bg=BG_CARD, fg=FG_COLOR_P ).place(relx=0.5, rely=0.05, anchor="center")
+            notesText.edit_modified(False)
+
+        noteName = noteFile
+        isEdited = False
+
+        titleL = Label(dataFrame, text=noteName, font=("arial", 32, 'bold'), bg=BG_CARD, fg=FG_COLOR_P )
+        titleL.place(relx=0.5, rely=0.05, anchor="center")
 
         textFrame = Frame(dataFrame, bg=BG_CARD)
         textFrame.place(relx=0, rely=0.12, relwidth=1, relheight=0.88)
@@ -1658,13 +1684,13 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
         scrollbar = ttk.Scrollbar(textFrame, style="Vertical.TScrollbar")
         scrollbar.place(relx=0.98, rely=0, relwidth=0.02, relheight=1)
 
-        notesText = Text( textFrame, bg=BG_INPUT, fg=FG_COLOR_P, font=('arial', 20), borderwidth=2, relief="solid", yscrollcommand=scrollbar.set, wrap="word")
+        notesText = Text( textFrame, bg=BG_INPUT, fg=FG_COLOR_P, font=('consolas', 20), borderwidth=2, relief="solid", yscrollcommand=scrollbar.set, wrap="word")
         notesText.place(relx=0, rely=0, relwidth=0.98, relheight=1)
+        notesText.bind("<<Modified>>", onTextModified)
 
         scrollbar.config(command=notesText.yview)
         notesText.focus_set()
         root.bind("<Control-s>", save_note)
-
 
         if os.path.exists(f"files/{user}/notes/{noteFile}-{noteDesc}.txt"):
             try:
@@ -1676,8 +1702,11 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
                 notesText.insert("1.0", f"[Error loading note]\n{e}")
         else:
             notesText.insert("1.0", "")
-    
 
+        notesText.edit_modified(False)
+        isEdited = False
+        updateTitle()
+    
     notesFiles = [ note.stem.split("-") for note in Path(f"files/{user}/notes").glob("*.txt") ]
 
     for note in notesFiles:

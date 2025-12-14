@@ -196,13 +196,9 @@ def loginScreen():
                 if user == i[2].strip('\n'):
                     loginBool, vaultKey = cryption.verifyMasterPassword(pasw, i[0], i[1])
                     if loginBool:
-                        with open(f'files/{user}/config/settings.json', 'r') as f:
-                            data = json.load(f)
-                        if not data["settings"]["Authentication"]["auth"]:
-                            mainScreen(user, vaultKey)
-                        else:
-                            print("Auth Needed")
-                            otp()
+                        with open(f'files/{user}/config/settings.json', 'r') as f: data = json.load(f)
+                        if not data["settings"]["Authentication"]["auth"]: mainScreen(user, vaultKey)
+                        else: otp()
                         break
                     elif user == i[2].strip('\n') and not loginBool: errL.config(text="[-] Incorrect Password", fg="red"); break
                     else: errL.config(text="[-] Account Does Not Exist", fg="red")
@@ -759,7 +755,7 @@ def mainScreen(user, vaultKey):
                 notesDesc = notesDescE.get()
                 if notesName != notesNamePH:
                     if notesDesc != notesDescPH:
-                        with open(f"files/{user}/notes/{notesName}-{notesDesc}.txt", 'w') as f: f.write("")
+                        with open(f"files/{user}/notes/{notesName}-{notesDesc}.txt", 'w') as f: f.close()
 
                 addScreen.destroy()
                 apps.notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey)
@@ -959,5 +955,4 @@ def mainScreen(user, vaultKey):
         apps.settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey)
 
 loginScreen()
-
 root.mainloop()

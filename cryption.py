@@ -96,4 +96,11 @@ def decrypt_note(vault_key: bytes, file_contents: str) -> str:
 
     try: return decrypt_line(vault_key, file_contents)
     except Exception: return file_contents
+def save_note(vault_key: bytes, note_path: str, note_text: str) -> None:
+    encrypted = encrypt_note(vault_key, note_text)
 
+    tmp_path = note_path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        f.write(encrypted)
+
+    os.replace(tmp_path, note_path)
