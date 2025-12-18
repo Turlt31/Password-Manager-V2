@@ -16,8 +16,10 @@ import json
 import os
 
 from theme import loadTheme
+from icons import icon
 import webbrowser
 import pyperclip
+
 
 def get_favicon(url, user):
     with open(f'files/{user}/config/settings.json', 'r') as f:
@@ -66,7 +68,6 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
         currentTheme = loadTheme(data["settings"]["General Settings"]["theme"])
 
     BG_PANEL = currentTheme["BG_PANEL"]
-    BG_LIST = currentTheme["BG_LIST"]
     BG_CARD = currentTheme["BG_CARD"]
 
     BG_INPUT = currentTheme["BG_INPUT"]
@@ -79,29 +80,9 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
     ACCENT_BLUE = currentTheme["ACCENT_BLUE"]
     ACCENT_BLUE_GLOW = currentTheme["ACCENT_BLUE_GLOW"]
 
-    showIconP = Image.open("icon/buttonImg/eyeP.png").resize((30, 30), Image.Resampling.LANCZOS)
-    showIconPTK = ImageTk.PhotoImage(showIconP)
-    showIconS = Image.open("icon/buttonImg/eyeS.png").resize((30, 30), Image.Resampling.LANCZOS)
-    showIconSTK = ImageTk.PhotoImage(showIconS)
-
-    hideIconP = Image.open("icon/buttonImg/hiddenP.png").resize((30, 30), Image.Resampling.LANCZOS)
-    hideIconPTK = ImageTk.PhotoImage(hideIconP)
-    hideIconS = Image.open("icon/buttonImg/hiddenS.png").resize((30, 30), Image.Resampling.LANCZOS)
-    hideIconSTK = ImageTk.PhotoImage(hideIconS)
-
-    editIconP = Image.open("icon/buttonImg/editP.png").resize((58, 58), Image.Resampling.LANCZOS)
-    editIconPTK = ImageTk.PhotoImage(editIconP)
-    editIconS = Image.open("icon/buttonImg/editS.png").resize((58, 58), Image.Resampling.LANCZOS)
-    editIconSTK = ImageTk.PhotoImage(editIconS)
-
-    deleteIconP = Image.open("icon/buttonImg/binP.png").resize((58, 58), Image.Resampling.LANCZOS)
-    deleteIconPTK = ImageTk.PhotoImage(deleteIconP)
-    deleteIconS = Image.open("icon/buttonImg/binS.png").resize((58, 58), Image.Resampling.LANCZOS)
-    deleteIconSTK = ImageTk.PhotoImage(deleteIconS)
 
     def displayPassword(parts, lineStr, event):
-        for widget in dataFrame.winfo_children():
-            widget.destroy()
+        for widget in dataFrame.winfo_children(): widget.destroy()
         favicon_path = get_favicon(parts[1], user)
         with open(f'files/{user}/config/settings.json', 'r') as f: data = json.load(f)
         showVar = [data["settings"]["General Settings"]["passwordsShownByDefault"]]
@@ -145,10 +126,10 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
         def showPassword():
             showVar[0] = not showVar[0]
             if showVar[0]:
-                showB.config(image=hideIconPTK)
+                showB.config(image=icon("hidden_p"))
                 passL.config(text=parts[3].strip('\n'))
             else:
-                showB.config(image=showIconPTK)
+                showB.config(image=icon("eye_p"))
                 passL.config(text="●"*len(parts[3].strip('\n')))
         def editPassword():
             def centerWindow(root, win, w, h):
@@ -336,22 +317,22 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
             if widget == linkL: linkL.configure(fg=ACCENT_BLUE_GLOW)
             if widget == userL: userL.configure(fg=FG_HIGHLIGHT)
             if widget == passL: passL.configure(fg=FG_HIGHLIGHT)
-            if widget == editB: editB.configure(image=editIconSTK)
-            if widget == deleteB: deleteB.configure(image=deleteIconSTK)
+            if widget == editB: editB.configure(image=icon("edit_s"))
+            if widget == deleteB: deleteB.configure(image=icon("bin_s"))
             if widget == showB:
-                if showVar[0]:showB.configure(image=hideIconSTK)
-                else: showB.configure(image=showIconSTK)
+                if showVar[0]:showB.configure(image=icon("hidden_s"))
+                else: showB.configure(image=icon("eye_s"))
         def onHoverLeave(event):
             widget = event.widget
 
             if widget == linkL: linkL.configure(fg=ACCENT_BLUE)
             if widget == userL: userL.configure(fg=FG_COLOR_S)
             if widget == passL: passL.configure(fg=FG_COLOR_S)
-            if widget == editB: editB.configure(image=editIconPTK)
-            if widget == deleteB: deleteB.configure(image=deleteIconPTK)
+            if widget == editB: editB.configure(image=icon("edit_p"))
+            if widget == deleteB: deleteB.configure(image=icon("bin_p"))
             if widget == showB:
-                if showVar[0]: showB.configure(image=hideIconPTK)
-                else: showB.configure(image=showIconPTK)
+                if showVar[0]: showB.configure(image=icon("hidden_p"))
+                else: showB.configure(image=icon("eye_p"))
 
         try:
             favicon_image = Image.open(favicon_path).resize((96, 96), Image.Resampling.LANCZOS)
@@ -455,22 +436,22 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
         showB.bind("<Enter>", onHoverEnter)
         showB.bind("<Leave>", onHoverLeave)
 
-        editB = Button(dataFrame, image=editIconPTK, command=lambda:controlButtons("edit"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        editB = Button(dataFrame, image=icon("edit_p"), command=lambda:controlButtons("edit"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
         editB.place(relx=0.85, rely=0.02, height=64, width=64)
         editB.bind("<Enter>", onHoverEnter)
         editB.bind("<Leave>", onHoverLeave)
 
-        deleteB = Button(dataFrame, image=deleteIconPTK, command=lambda:controlButtons("delete"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        deleteB = Button(dataFrame, image=icon("bin_p"), command=lambda:controlButtons("delete"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
         deleteB.place(relx=0.85, rely=0.9, height=64, width=64)
         deleteB.bind("<Enter>", onHoverEnter)
         deleteB.bind("<Leave>", onHoverLeave)
 
         if showVar[0]:
             passL.config(text=parts[3])
-            showB.config(image=hideIconPTK)
+            showB.config(image=icon("hidden_p"))
         else:
             passL.config(text="●"*len(parts[3].strip('\n')))
-            showB.config(image=showIconPTK)
+            showB.config(image=icon("eye_p"))
 
         Label(dataFrame, text="Hint: Click to Copy", font=('arial', 15), bg=BG_CARD, fg="#424242").place(relx=0.35, rely=0.95)
     def move_password(lineStr, direction):
@@ -498,6 +479,27 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
 
         passwords(plainList, inner_frame, contFrame, canvas, dataFrame, root, user, searchParam, vaultKey)
 
+    def setFrameBg(frame, color):
+        frame.configure(bg=color)
+        for w in frame.winfo_children():
+            try:
+                if type(w) == Label:
+                    w.configure(bg=color)
+            except:
+                pass
+    def onHoverEnter(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+        if frame:
+            setFrameBg(frame, BG_BUTTON_ALT)
+    def onHoverLeave(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+
+        if frame:
+            setFrameBg(frame, BG_CARD)
 
     filtered_passwords = []
     passwordListLower = [p.lower() for p in passwordList]
@@ -519,6 +521,9 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
         accFrame.place(x=10, y=yPos, relwidth=0.95, height=80)
         accFrame.bind("<Button-1>", lambda e, p=parts, ln=line: displayPassword(p, ln, e))
         accFrame.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+        accFrame.bindtags((accFrame, "AccountFrame", ".", "all"))
+        accFrame.bind_class("AccountFrame", "<Enter>", onHoverEnter)
+        accFrame.bind_class("AccountFrame", "<Leave>", onHoverLeave)
 
         favicon_path = get_favicon(parts[1], user)
         if favicon_path and os.path.exists(favicon_path):
@@ -542,7 +547,6 @@ def passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, use
         userL.place(x=80, y=46)
         userL.bind("<Button-1>", lambda e, p=parts, ln=line: displayPassword(p, ln, e))
         userL.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-
         move_up_disabled = idx == 0
         move_down_disabled = idx == len(passwordList) - 1
 
@@ -571,7 +575,6 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
         currentTheme = loadTheme(data["settings"]["General Settings"]["theme"])
 
     BG_PANEL = currentTheme["BG_PANEL"]
-    BG_LIST = currentTheme["BG_LIST"]
     BG_CARD = currentTheme["BG_CARD"]
 
     BG_INPUT = currentTheme["BG_INPUT"]
@@ -583,26 +586,6 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
     FG_HIGHLIGHT = currentTheme["FG_MUTED"]
     ACCENT_BLUE = currentTheme["ACCENT_BLUE"]
     ACCENT_BLUE_GLOW = currentTheme["ACCENT_BLUE_GLOW"]
-
-    showIconP = Image.open("icon/buttonImg/eyeP.png").resize((30, 30), Image.Resampling.LANCZOS)
-    showIconPTK = ImageTk.PhotoImage(showIconP)
-    showIconS = Image.open("icon/buttonImg/eyeS.png").resize((30, 30), Image.Resampling.LANCZOS)
-    showIconSTK = ImageTk.PhotoImage(showIconS)
-
-    hideIconP = Image.open("icon/buttonImg/hiddenP.png").resize((30, 30), Image.Resampling.LANCZOS)
-    hideIconPTK = ImageTk.PhotoImage(hideIconP)
-    hideIconS = Image.open("icon/buttonImg/hiddenS.png").resize((30, 30), Image.Resampling.LANCZOS)
-    hideIconSTK = ImageTk.PhotoImage(hideIconS)
-
-    editIconP = Image.open("icon/buttonImg/editP.png").resize((58, 58), Image.Resampling.LANCZOS)
-    editIconPTK = ImageTk.PhotoImage(editIconP)
-    editIconS = Image.open("icon/buttonImg/editS.png").resize((58, 58), Image.Resampling.LANCZOS)
-    editIconSTK = ImageTk.PhotoImage(editIconS)
-
-    deleteIconP = Image.open("icon/buttonImg/binP.png").resize((58, 58), Image.Resampling.LANCZOS)
-    deleteIconPTK = ImageTk.PhotoImage(deleteIconP)
-    deleteIconS = Image.open("icon/buttonImg/binS.png").resize((58, 58), Image.Resampling.LANCZOS)
-    deleteIconSTK = ImageTk.PhotoImage(deleteIconS)
 
     def displayCard(parts, lineStr, event=None):
         for widget in dataFrame.winfo_children(): widget.destroy()
@@ -664,13 +647,13 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
 
             if not showVar[0]:
                 cardNumber = formatCard(parts[3])
-                showB.config(image=hideIconPTK)
+                showB.config(image=icon("hidden_p"))
                 cardNoL.config(text=cardNumber)
                 cvcL.config(text=parts[5])
                 pinL.config(text=parts[6])
             else:
                 cardNumber = formatCard(parts[3], mode="m")
-                showB.config(image=showIconPTK)
+                showB.config(image=icon("eye_p"))
                 cardNoL.config(text=cardNumber)
                 cvcL.config(text="●"*len(parts[5]))
                 pinL.config(text="●"*len(parts[6].strip('\n')))
@@ -964,11 +947,11 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             if widget == expDateL: expDateL.config(fg=FG_HIGHLIGHT)
             if widget == cvcL: cvcL.config(fg=FG_HIGHLIGHT)
             if widget == pinL: pinL.config(fg=FG_HIGHLIGHT)
-            if widget == editB: editB.configure(image=editIconSTK)
-            if widget == deleteB: deleteB.configure(image=deleteIconSTK)
+            if widget == editB: editB.configure(image=icon("edit_s"))
+            if widget == deleteB: deleteB.configure(image=icon("bin_s"))
             if widget == showB:
-                if showVar[0]:showB.configure(image=showIconSTK)
-                else: showB.configure(image=hideIconSTK)
+                if showVar[0]:showB.configure(image=icon("eye_s"))
+                else: showB.configure(image=icon("hidden_s"))
         def onHoverLeave(event):
             widget = event.widget
 
@@ -978,11 +961,11 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
             if widget == expDateL: expDateL.config(fg=FG_COLOR_S)
             if widget == cvcL: cvcL.config(fg=FG_COLOR_S)
             if widget == pinL: pinL.config(fg=FG_COLOR_S)
-            if widget == editB: editB.configure(image=editIconPTK)
-            if widget == deleteB: deleteB.configure(image=deleteIconPTK)
+            if widget == editB: editB.configure(image=icon("edit_p"))
+            if widget == deleteB: deleteB.configure(image=icon("bin_p"))
             if widget == showB:
-                if showVar[0]: showB.configure(image=showIconPTK)
-                else: showB.configure(image=hideIconPTK)
+                if showVar[0]: showB.configure(image=icon("eye_p"))
+                else: showB.configure(image=icon("hidden_p"))
 
         Label(dataFrame, text=parts[0], font=('arial', 32, 'bold'), bg=BG_CARD, fg=FG_COLOR_P).place(relx=0.25, rely=0.03)
         linkL = Label(dataFrame, text=parts[1], font=('arial', 24, 'underline'), bg=BG_CARD, fg=ACCENT_BLUE)
@@ -1026,17 +1009,17 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
         pinL.bind("<Enter>", onHoverEnter)
         pinL.bind("<Leave>", onHoverLeave)
 
-        showB = Button(dataFrame, image=showIconPTK, command=lambda:controlButtons("show"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        showB = Button(dataFrame, image=icon("eye_p"), command=lambda:controlButtons("show"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
         showB.place(relx=0.9, rely=0.46, width=32, height=32)
         showB.bind("<Enter>", onHoverEnter)
         showB.bind("<Leave>", onHoverLeave)
 
-        editB = Button(dataFrame, image=editIconPTK, command=lambda:controlButtons("edit"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        editB = Button(dataFrame, image=icon("edit_p"), command=lambda:controlButtons("edit"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
         editB.place(relx=0.85, rely=0.02, height=64, width=64)
         editB.bind("<Enter>", onHoverEnter)
         editB.bind("<Leave>", onHoverLeave)
 
-        deleteB = Button(dataFrame, image=deleteIconPTK, command=lambda:controlButtons("delete"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        deleteB = Button(dataFrame, image=icon("bin_p"), command=lambda:controlButtons("delete"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
         deleteB.place(relx=0.85, rely=0.9, height=64, width=64)
         deleteB.bind("<Enter>", onHoverEnter)
         deleteB.bind("<Leave>", onHoverLeave)
@@ -1049,8 +1032,7 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
 
         plainList = []
         for enc in encryptedLines:
-            enc = enc.strip()
-            plainList.append(cryption.decrypt_line(vaultKey, enc))
+            plainList.append(cryption.decrypt_line(vaultKey, enc.strip()))
 
         try: idx = plainList.index(lineStr)
         except ValueError: return
@@ -1066,6 +1048,28 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                 f.write(cryption.encrypt_line(vaultKey, record) + "\n")
 
         cards(plainList, inner_frame, contFrame, canvas, dataFrame, root, user, searchParam, vaultKey)
+
+    def setFrameBg(frame, color):
+        frame.configure(bg=color)
+        for w in frame.winfo_children():
+            try:
+                if type(w) == Label:
+                    w.configure(bg=color)
+            except:
+                pass
+    def onHoverEnter(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+        if frame:
+            setFrameBg(frame, BG_BUTTON_ALT)
+    def onHoverLeave(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+
+        if frame:
+            setFrameBg(frame, BG_CARD)
 
     filteredCards = []
     cardListLower = [c.lower() for c in cardList]
@@ -1086,6 +1090,9 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
         accFrame.place(x=10, y=yPos, relwidth=0.95, height=80)
         accFrame.bind("<Button-1>", lambda e, p=parts, ln=line: displayCard(p, ln, e))
         accFrame.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+        accFrame.bindtags((accFrame, "AccountFrame", ".", "all"))
+        accFrame.bind_class("AccountFrame", "<Enter>", onHoverEnter)
+        accFrame.bind_class("AccountFrame", "<Leave>", onHoverLeave)
 
         favicon_path = get_favicon(parts[1], user)
         if favicon_path and os.path.exists(favicon_path):
@@ -1098,8 +1105,7 @@ def cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searc
                 icon_label.place(x=8, y=8, width=64, height=64)
                 icon_label.bind("<Button-1>", lambda e, p=parts, ln=line: displayCard(p, ln, e))
                 icon_label.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-            except Exception as e:
-                pass
+            except Exception as e: pass
 
         bankNameL = Label(accFrame, text=parts[0], font=('arial', 28), bg=BG_CARD, fg=FG_COLOR_P)
         bankNameL.place(x=80, y=2)
@@ -1137,19 +1143,14 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
         data = json.load(f)
         currentTheme = loadTheme(data["settings"]["General Settings"]["theme"])
 
-    BG_PANEL = currentTheme["BG_PANEL"]
-    BG_LIST = currentTheme["BG_LIST"]
     BG_CARD = currentTheme["BG_CARD"]
-
     BG_INPUT = currentTheme["BG_INPUT"]
     BG_BUTTON = currentTheme["BG_BUTTON"]
     BG_BUTTON_ALT = currentTheme["BG_BUTTON_ALT"]
 
     FG_COLOR_P = currentTheme["FG_PRIMARY"]
     FG_COLOR_S = currentTheme["FG_SECONDARY"]
-    FG_HIGHLIGHT = currentTheme["FG_MUTED"]
-    ACCENT_BLUE = currentTheme["ACCENT_BLUE"]
-    ACCENT_BLUE_GLOW = currentTheme["ACCENT_BLUE_GLOW"]
+
 
     def displaySetting(settingOption, event=None):
         for widget in dataFrame.winfo_children(): widget.destroy()
@@ -1164,7 +1165,6 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
                 settings = json.load(f)["settings"][settingOption]
 
             Label(dataFrame, text="General Settings", font=('arial', 32), bg=BG_CARD, fg=FG_COLOR_P ).place(relx=0.5, rely=0.05, anchor="center")
-
 
             def saveSetting(event):
                 with open(f'files/{user}/config/settings.json', 'r') as f:
@@ -1249,7 +1249,6 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
             faviconB.bind("<Enter>", onHoverEnter)
             faviconB.bind("<Leave>", onHoverLeave)
             faviconB.bind("<Button-1>", onClick)
-
 
             lbl_passwords = Label(dataFrame, text="Hide Passwords:", font=("arial", 28), bg=BG_CARD, fg=FG_COLOR_P)
             lbl_passwords.place(relx=0.02, rely=0.52, anchor='w')
@@ -1356,7 +1355,10 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
             imgLabel.place(relx=0.5, rely=0.7, anchor='center')
             imgLabel.image = img
             imgLabel['image'] = imgLabel.image
-            
+        
+        if settingOption == "Theme Creator": 
+            print("Lets Create a new theme")
+
         if settingOption == "Change Password":
             Label(dataFrame, text="Change Password", font=('arial', 32), bg=BG_CARD, fg=FG_COLOR_P).place(relx=0.5, rely=0.05, anchor="center")
         
@@ -1579,12 +1581,38 @@ def settings(inner_frame, contFrame, canvas, dataFrame, user, vaultKey):
             confirmB = Button(dataFrame, text="Confirm Deletion", font=('arial', 28), command=delete, bg=BG_BUTTON, fg=FG_COLOR_P, relief='flat', bd=0, activebackground=BG_BUTTON_ALT, activeforeground=FG_COLOR_S)
             confirmB.place(relx=0.5, rely=0.4, relwidth=0.8, relheight=0.08, anchor="center")
 
-    settingList = ["General Settings", "Authentication", "Change Password", "Delete Account"]
+    def setFrameBg(frame, color):
+        frame.configure(bg=color)
+        for w in frame.winfo_children():
+            try:
+                if type(w) == Label:
+                    w.configure(bg=color)
+            except:
+                pass
+    def onHoverEnter(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+        if frame:
+            setFrameBg(frame, BG_BUTTON_ALT)
+    def onHoverLeave(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+
+        if frame:
+            setFrameBg(frame, BG_CARD)
+
+
+    settingList = ["General Settings", "Authentication", "Theme Creator", "Change Password", "Delete Account"]
 
     for line in settingList:
         accFrame = Frame(inner_frame, bg=BG_CARD, bd=0, highlightthickness=0)
         accFrame.place(x=10, y=yPos, relwidth=0.95, height=80)
         accFrame.bind("<Button-1>", lambda e, s=line: displaySetting(s, e))
+        accFrame.bindtags((accFrame, "AccountFrame", ".", "all"))
+        accFrame.bind_class("AccountFrame", "<Enter>", onHoverEnter)
+        accFrame.bind_class("AccountFrame", "<Leave>", onHoverLeave)
 
         settingNameL = Label(accFrame, text=line, font=('arial', 32), bg=BG_CARD, fg=FG_COLOR_P)
         settingNameL.place(x=10, y=15)
@@ -1605,19 +1633,13 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
         data = json.load(f)
         currentTheme = loadTheme(data["settings"]["General Settings"]["theme"])
 
-    BG_PANEL = currentTheme["BG_PANEL"]
-    BG_LIST = currentTheme["BG_LIST"]
     BG_CARD = currentTheme["BG_CARD"]
 
     BG_INPUT = currentTheme["BG_INPUT"]
-    BG_BUTTON = currentTheme["BG_BUTTON"]
     BG_BUTTON_ALT = currentTheme["BG_BUTTON_ALT"]
 
     FG_COLOR_P = currentTheme["FG_PRIMARY"]
     FG_COLOR_S = currentTheme["FG_SECONDARY"]
-    FG_HIGHLIGHT = currentTheme["FG_MUTED"]
-    ACCENT_BLUE = currentTheme["ACCENT_BLUE"]
-    ACCENT_BLUE_GLOW = currentTheme["ACCENT_BLUE_GLOW"]
 
     def displayNote(noteFile, noteDesc, event):
         for widget in dataFrame.winfo_children():
@@ -1646,6 +1668,9 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
                 updateTitle()
 
             notesText.edit_modified(False)
+        def onHoverEnter(event): pass
+        def onHoverLeave(event): pass
+        def controlButtons(option): pass
 
         noteName = noteFile
         isEdited = False
@@ -1692,6 +1717,16 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
         notesText.focus_set()
         root.bind("<Control-s>", save_note)
 
+        editB = Button(dataFrame, image=icon("edit_p"), command=lambda:controlButtons("edit"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        editB.place(relx=0.86, rely=0.02, height=64, width=64)
+        editB.bind("<Enter>", onHoverEnter)
+        editB.bind("<Leave>", onHoverLeave)
+
+        deleteB = Button(dataFrame, image=icon("bin_p"), command=lambda:controlButtons("delete"), relief="flat", bd=0, bg=BG_CARD, activebackground=BG_CARD)
+        deleteB.place(relx=0.03, rely=0.02, height=64, width=64)
+        deleteB.bind("<Enter>", onHoverEnter)
+        deleteB.bind("<Leave>", onHoverLeave)
+
         if os.path.exists(f"files/{user}/notes/{noteFile}-{noteDesc}.txt"):
             try:
                 with open(f"files/{user}/notes/{noteFile}-{noteDesc}.txt", "r", encoding="utf-8") as f:
@@ -1700,13 +1735,34 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
                 notesText.insert("1.0", content)
             except Exception as e:
                 notesText.insert("1.0", f"[Error loading note]\n{e}")
-        else:
-            notesText.insert("1.0", "")
+        else: notesText.insert("1.0", "")
 
         notesText.edit_modified(False)
         isEdited = False
         updateTitle()
     
+    def setFrameBg(frame, color):
+        frame.configure(bg=color)
+        for w in frame.winfo_children():
+            try:
+                if type(w) == Label:
+                    w.configure(bg=color)
+            except:
+                pass
+    def onHoverEnter(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+        if frame:
+            setFrameBg(frame, BG_BUTTON_ALT)
+    def onHoverLeave(event):
+        frame = event.widget
+        while frame and not isinstance(frame, Frame):
+            frame = frame.master
+
+        if frame:
+            setFrameBg(frame, BG_CARD)
+
     notesFiles = [ note.stem.split("-") for note in Path(f"files/{user}/notes").glob("*.txt") ]
 
     for note in notesFiles:
@@ -1714,6 +1770,9 @@ def notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey):
         accFrame.place(x=10, y=yPos, relwidth=0.95, height=80)
         accFrame.bind("<Button-1>", lambda e, n=note[0], d=note[1]: displayNote(n, d, e))
         accFrame.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+        accFrame.bindtags((accFrame, "AccountFrame", ".", "all"))
+        accFrame.bind_class("AccountFrame", "<Enter>", onHoverEnter)
+        accFrame.bind_class("AccountFrame", "<Leave>", onHoverLeave)
 
         noteNameL = Label(accFrame, text=note[0], font=('arial', 28), bg=BG_CARD, fg=FG_COLOR_P)
         noteNameL.place(x=5, y=2)

@@ -3,7 +3,6 @@ from tkinter import *
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageOps
 
-
 import secrets
 import base64
 import random
@@ -14,6 +13,7 @@ import os
 
 from theme import loadTheme
 import cryption
+import icons
 import apps
 
 root = Tk()
@@ -117,7 +117,7 @@ def loginScreen():
             if not usernameAvailable:
                 Label(rect, text="Username already exists!", font=('arial', 20), bg=BG_COLOR_LIGHT, fg="red").place(x=80, y=340)
             else:
-                data = {
+                settingsData = {
                     "settings": {
                         "General Settings": {
                             "passwordsShownByDefault": False,
@@ -133,6 +133,8 @@ def loginScreen():
                         }
                     }
                 }
+                
+                
                 with open('files/logins.txt', 'a') as f:
                     f.write(f"{passwordData["salt"]},{passwordData["login_hash"]},{username}\n")
                 os.mkdir(f"files/{username}")
@@ -142,7 +144,7 @@ def loginScreen():
 
                 [open(f"files/{username}/{file}", 'w').close() for file in ["cards.txt", "passwords.txt"]]
                 with open(f"files/{username}/config/settings.json", "w") as f:
-                    json.dump(data, f, indent=4)
+                    json.dump(settingsData, f, indent=4)
 
                 Label(rect, text="Account Created!", font=('arial', 32), bg=BG_COLOR_LIGHT, fg="green").place(x=80, y=340)
 
@@ -241,6 +243,7 @@ def loginScreen():
 def mainScreen(user, vaultKey):
     for widget in root.winfo_children(): widget.destroy()
     placeholder = "Search..."
+    icons.load_all_icons()
     
     with open(f'files/{user}/config/settings.json', 'r') as f:
         global menuOpen
@@ -268,7 +271,6 @@ def mainScreen(user, vaultKey):
         
         with open(f"files/{user}/cards.txt", 'r') as f: data = f.readlines()
         for i in data: ca.append(cryption.decrypt_line(vaultKey, i))
-
 
         return pa, ca
 
@@ -487,6 +489,7 @@ def mainScreen(user, vaultKey):
                 with open(f"files/{user}/passwords.txt", 'r') as f: data = f.readlines()
                 for i in data: passwordList.append(cryption.decrypt_line(vaultKey, i))
                 addScreen.destroy()
+                addB.config(state="normal")
                 apps.passwords(passwordList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
 
             Label(addScreen, text="Add Password", font=('arial', 32), bg=BG_PANEL, fg=FG_COLOR_P).place(x=60, y=5)
@@ -670,6 +673,7 @@ def mainScreen(user, vaultKey):
                 with open(f"files/{user}/cards.txt", 'r') as f: data = f.readlines()
                 for i in data: cardList.append(cryption.decrypt_line(vaultKey, i))
                 addScreen.destroy()
+                addB.config(state="normal")
                 apps.cards(cardList, inner_frame, contFrame, canvas, dataFrame, root, user, searchE.get(), vaultKey)
 
             Label(addScreen, text="Add Card", font=('arial', 32), bg=BG_PANEL, fg=FG_COLOR_P).place(x=100, y=5)
@@ -758,6 +762,7 @@ def mainScreen(user, vaultKey):
                         with open(f"files/{user}/notes/{notesName}-{notesDesc}.txt", 'w') as f: f.close()
 
                 addScreen.destroy()
+                addB.config(state="normal")
                 apps.notes(inner_frame, contFrame, canvas, dataFrame, user, root, vaultKey)
 
             notesNameE = Entry(addScreen, font=('arial', 28), fg=FG_COLOR_S, bg=BG_INPUT, relief="flat", borderwidth=0, justify="center")
